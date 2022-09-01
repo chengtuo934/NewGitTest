@@ -65,7 +65,7 @@ public:
 
 
 private:
-    pthread_cond_t m_cond;
+    pthread_cond_t m_cond; // 设置条件变量
 };
 
 // 信号量类

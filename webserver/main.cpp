@@ -59,7 +59,11 @@ int main(int argc, char* argv[]) {
 
     // 创建监听的文件描述符
     int listenfd = socket(PF_INET, SOCK_STREAM, 0);
-    // 判断listenfd...
+    // 判断listenfd
+    if (listenfd == -1) {
+        perror("listen");
+        exit(-1);
+    }
 
     //设置端口复用(在绑定前设置)
     int reuse = 1;
@@ -70,8 +74,12 @@ int main(int argc, char* argv[]) {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_family = AF_INET;
     address.sin_port = htons(port);
-    bind(listenfd, (struct sockaddr*)&address, sizeof(address));
-    // 判断bind...
+    int bindret = bind(listenfd, (struct sockaddr*)&address, sizeof(address));
+    // 判断bindret
+    if (bindret == -1) {
+        perror("bind");
+        exit(-1);
+    }
 
     // 监听
     listen(listenfd, 5);
@@ -87,7 +95,7 @@ int main(int argc, char* argv[]) {
     while(true) {
         int num = epoll_wait(epollfd, events, MAX_EVENT_NUMBER, -1);
         if ((num < 0) && (errno != EINTR)) {
-            printf("eppoll failure\n");
+            printf("epoll failure\n");
             break;
         }
 
@@ -99,12 +107,15 @@ int main(int argc, char* argv[]) {
                 struct sockaddr_in client_address;
                 socklen_t client_addrlen = sizeof(client_address);
                 int connfd = accept(listenfd, (struct sockaddr*)&client_address, &client_addrlen);
-                // 判断connfd...
+                // 判断connfd
+                if (connfd == -1) {
+                    perror("accept");
+                    exit(-1);
+                }
 
                 if (http_conn::m_user_count >= MAX_FD) {
                     // 说明目前的连接数满了
                     // 给客户端写一个信息：服务器内部正忙...
-                    
                     close(connfd);
                     continue;
 
@@ -122,6 +133,7 @@ int main(int argc, char* argv[]) {
                     users[sockfd].close_conn();
                 }
             } else if (events[i].events & EPOLLOUT) {
+                // 判断是否有写事件发生
                 if (!users[sockfd].write()) {   // 一次性写完数据
                     users[sockfd].close_conn();
                 }
